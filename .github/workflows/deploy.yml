@@ -3,16 +3,18 @@ name: Content Management Frontend
 on:
   push:
     branches:
-      - main
+      - main  # Trigger on pushes to main branch
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout code (for reference only)
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      # Step 2: SSH into EC2 and deploy
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v0.1.7
         with:
@@ -20,32 +22,24 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
           script: |
-            # Start Docker
+            # Start Docker if not running
             sudo systemctl start docker
 
-            # Navigate to deployment folder
+            # Deployment directory
             DEPLOY_DIR="/home/ec2-user/frontend"
+
+            # Remove old repo completely
+            rm -rf $DEPLOY_DIR
             mkdir -p $DEPLOY_DIR
             cd $DEPLOY_DIR
 
-            # Pull latest code
-            if [ -d ".git" ]; then
-              git reset --hard
-              git pull origin main
-            else
-              git clone https://github.com/BharatVikas/Content-Management-Frontend.git .
-            fi
+            # Clone the correct repo fresh
+            git clone https://github.com/BharatVikas/Content-Management-Frontend.git .
 
-            # Stop & remove any existing container
-            if sudo docker ps -a --format '{{.Names}}' | grep -Eq '^frontend-app$'; then
-              sudo docker stop frontend-app
-              sudo docker rm frontend-app
-            fi
-
-            # Remove old image if exists
-            if sudo docker images -q frontend-app > /dev/null; then
-              sudo docker rmi frontend-app || true
-            fi
+            # Stop & remove old container if exists
+            sudo docker stop frontend-app || true
+            sudo docker rm frontend-app || true
+            sudo docker rmi frontend-app || true
 
             # Build new Docker image
             sudo docker build -t frontend-app .
