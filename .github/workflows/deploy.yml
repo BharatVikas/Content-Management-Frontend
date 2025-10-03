@@ -1,4 +1,4 @@
-name: CI/CD Frontend Docker Deploy
+name: Content Management Frontend
 
 on:
   push:
